@@ -24,11 +24,11 @@ onMounted(() => {
             const y = (e.clientY / window.innerHeight - 0.5) * 2
 
             // Offset inside the stretched texture (opposite movement)
-            texture.offset.x = -x * 0.035
+            texture.offset.x = -x * 0.0 // unchanged
             texture.offset.y = -y * 0.1
 
             // on x movenent, rotate the texture a bit
-            texture.rotation = -x * 0.1
+            texture.rotation = -x * -0.1
         })
     })
 
