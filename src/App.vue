@@ -21,6 +21,7 @@ import CityBackground from './components/CityBackground.vue';
   <!-- <RouterView /> -->
 
   <CityBackground />
+  
 </template>
 
 <style scoped>
