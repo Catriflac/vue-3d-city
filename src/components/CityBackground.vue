@@ -4,131 +4,106 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 onMounted(() => {
-    const scene = new THREE.Scene()
+  const scene = new THREE.Scene()
 
-    // Load background texture
-    const textureLoader = new THREE.TextureLoader()
-    textureLoader.load('/sky.jpg', (texture) => {
-        // Enable transforms
-        texture.wrapS = THREE.ClampToEdgeWrapping
-        texture.wrapT = THREE.ClampToEdgeWrapping
+  // Camera
+  const camera = new THREE.PerspectiveCamera(
+    60,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  )
+  camera.position.set(0, 0, 60)
+  camera.rotation.x = THREE.MathUtils.degToRad(30)
+  camera.position.y = -25
 
-        // Stretch (zoom in 20% → use 0.8 scale)
-        texture.repeat.set(0.8, 0.8)
-        texture.center.set(0.5, 0.5) // keep scaling centered
+  // Renderer
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
+  renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.setPixelRatio(window.devicePixelRatio)
+  document.getElementById('bg-canvas').appendChild(renderer.domElement)
 
-        scene.background = texture
+  // Lights
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6))
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1)
+  dirLight.position.set(5, 10, 7)
+  scene.add(dirLight)
 
-        document.addEventListener('mousemove', (e) => {
-            const x = (e.clientX / window.innerWidth - 0.5) * 2
-            const y = (e.clientY / window.innerHeight - 0.5) * 2
+  // Load background texture
+  let skyTexture
+  const textureLoader = new THREE.TextureLoader()
+  textureLoader.load('/sky.jpg', (texture) => {
+    texture.wrapS = THREE.ClampToEdgeWrapping
+    texture.wrapT = THREE.ClampToEdgeWrapping
+    texture.repeat.set(0.8, 0.8)
+    texture.center.set(0.5, 0.5)
+    scene.background = texture
+    skyTexture = texture
+  })
 
-            // Offset inside the stretched texture (opposite movement)
-            texture.offset.x = -x * 0.0 // unchanged
-            texture.offset.y = -y * 0.1
+  // Load the GLB model
+  let model
+  const loader = new GLTFLoader()
+  loader.load('/public/city.glb', (gltf) => {
+    model = gltf.scene
+    scene.add(model)
 
-            // on x movenent, rotate the texture a bit
-            texture.rotation = -x * -0.1
-        })
-    })
+    // Rotate 30 degrees to the left at start
+    model.rotation.y = THREE.MathUtils.degToRad(-20)
+  })
 
+  // --- Smooth parallax setup ---
+  const target = { x: 0, y: 0 }
+  const current = { x: 0, y: 0 }
+  const baseRotationY = THREE.MathUtils.degToRad(-30)
+  const baseRotationX = 0
 
-    // Camera
-    const camera = new THREE.PerspectiveCamera(
-        60,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000
-    )
-    camera.position.set(0, 5, 10)
+  document.addEventListener('mousemove', (e) => {
+    target.x = (e.clientX / window.innerWidth - 0.5) * 2
+    target.y = (e.clientY / window.innerHeight - 0.5) * 2
+  })
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
-    renderer.setSize(window.innerWidth, window.innerHeight)
-    renderer.setPixelRatio(window.devicePixelRatio)
-    document.getElementById('bg-canvas').appendChild(renderer.domElement)
+  function animate() {
+    requestAnimationFrame(animate)
 
-    // Lights
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6))
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1)
-    dirLight.position.set(5, 10, 7)
-    scene.add(dirLight)
+    // Smoothly interpolate
+    current.x += (target.x - current.x) * 0.05
+    current.y += (target.y - current.y) * 0.05
 
-    // Load the GLB
-    const loader = new GLTFLoader()
-    loader.load('/public/city.glb', (gltf) => {
-        const model = gltf.scene
-        scene.add(model)
-
-        // Rotate 30 degrees to the left at start
-        model.rotation.y = THREE.MathUtils.degToRad(-20)
-        // Rotate camera up a bit
-        camera.rotation.x = THREE.MathUtils.degToRad(30)
-
-        // Move camera back a bit
-        camera.position.set(0, 0, 60)
-        // Move the camera down a bit
-        camera.position.y = -25
-
-        const baseRotationY = THREE.MathUtils.degToRad(-30)
-        const baseRotationX = 0
-
-        // Mouse parallax
-        document.addEventListener('mousemove', (e) => {
-            const x = (e.clientX / window.innerWidth - 0.5) * 2
-            const y = (e.clientY / window.innerHeight - 0.5) * 2
-            // model.rotation.y = x * 0.4
-            // model.rotation.x = y * 0.2
-            // Apply relative to base
-            model.rotation.y = baseRotationY + x * 0.2
-            model.rotation.x = baseRotationX + y * 0.1
-        })
-
-        animate()
-    })
-
-    function animate() {
-        requestAnimationFrame(animate)
-        renderer.render(scene, camera)
+    if (model) {
+      model.rotation.y = baseRotationY + current.x * 0.2
+      model.rotation.x = baseRotationX + current.y * 0.1
     }
 
-    // Resize handler
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight
-        camera.updateProjectionMatrix()
-        renderer.setSize(window.innerWidth, window.innerHeight)
-    })
+    if (skyTexture) {
+      skyTexture.offset.y = -current.y * 0.1
+      skyTexture.rotation = -current.x * -0.1
+    }
+
+    renderer.render(scene, camera)
+  }
+  animate()
+
+  // Resize handler
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight
+    camera.updateProjectionMatrix()
+    renderer.setSize(window.innerWidth, window.innerHeight)
+  })
 })
 </script>
 
-<template>
-    <!-- <div id="bg-canvas"></div> -->
 
+<template>
 
     <!-- Three.js canvas -->
     <div id="bg-canvas"></div>
 
-
-    <!-- Overlay content -->
-    <div class="relative z-10">
-        <main class="text-center mt-32 text-white">
-
-            <h1 class="text-5xl font-bold">Welcome to My 3D City</h1>
-            <p class="mt-4 text-xl">This is a Three.js background with interactive parallax.</p>
-
-            <div class="mt-24">
-                <p>Built using </p>
-                <ul class="mt-4 text-xl">
-                    <li>Vue.js for the frontend framework</li>
-                    <li>Three.js for 3D graphics rendering</li>
-                    <li>GLTFLoader for loading 3D models in GLB format</li>
-                </ul>
-                <p>Experience smooth animations and responsive design with modern web technologies</p>
-            </div>
-
-
-        </main>
+    <!-- Slot for overlay content -->
+    <div class="relative z-10 w-full h-full flex flex-col items-center justify-start">
+      <slot />
     </div>
+
 </template>
 
 <style>

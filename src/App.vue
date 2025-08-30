@@ -20,8 +20,23 @@ import CityBackground from './components/CityBackground.vue';
 
   <!-- <RouterView /> -->
 
-  <CityBackground />
-  
+  <CityBackground>
+    <main class="text-center mt-32 text-white">
+      <h1 class="text-5xl font-bold">Welcome to My 3D City</h1>
+      <p class="mt-4 text-xl">This is a Three.js background with interactive parallax.</p>
+
+      <div class="mt-24">
+        <p>Built using </p>
+        <ul class="mt-4 text-xl">
+          <li>Vue.js for the frontend framework</li>
+          <li>Three.js for 3D graphics rendering</li>
+          <li>GLTFLoader for loading 3D models in GLB format</li>
+        </ul>
+        <p>Experience smooth animations and responsive design with modern web technologies</p>
+      </div>
+    </main>
+  </CityBackground>
+
 </template>
 
 <style scoped>
